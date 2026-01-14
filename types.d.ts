@@ -10,6 +10,14 @@ type StaticData = {
     totalMemoryGB: number;
 }
 
+type EnvCheckResult = {
+    claudeCodeInstalled: boolean;
+    claudeCodeVersion: string | null;
+    apiKeyConfigured: boolean;
+    claudeConfigExists: boolean;
+    allPassed: boolean;
+}
+
 type UnsubscribeFunction = () => void;
 
 type EventPayloadMapping = {
@@ -18,6 +26,9 @@ type EventPayloadMapping = {
     "generate-session-title": string;
     "get-recent-cwds": string[];
     "select-directory": string | null;
+    "check-environment": EnvCheckResult;
+    "get-install-instructions": string;
+    "open-external": void;
 }
 
 interface Window {
@@ -30,5 +41,9 @@ interface Window {
         generateSessionTitle: (userInput: string | null) => Promise<string>;
         getRecentCwds: (limit?: number) => Promise<string[]>;
         selectDirectory: () => Promise<string | null>;
+        // Environment check APIs
+        checkEnvironment: () => Promise<EnvCheckResult>;
+        getInstallInstructions: () => Promise<string>;
+        openExternal: (url: string) => Promise<void>;
     }
 }

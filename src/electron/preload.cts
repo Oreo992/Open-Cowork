@@ -25,10 +25,18 @@ electron.contextBridge.exposeInMainWorld("electron", {
     },
     generateSessionTitle: (userInput: string | null) => 
         ipcInvoke("generate-session-title", userInput),
-    getRecentCwds: (limit?: number) => 
+    getRecentCwds: (limit?: number) =>
         ipcInvoke("get-recent-cwds", limit),
-    selectDirectory: () => 
-        ipcInvoke("select-directory")
+    selectDirectory: () =>
+        ipcInvoke("select-directory"),
+
+    // Environment check APIs
+    checkEnvironment: () =>
+        ipcInvoke("check-environment"),
+    getInstallInstructions: () =>
+        ipcInvoke("get-install-instructions"),
+    openExternal: (url: string) =>
+        ipcInvoke("open-external", url)
 } satisfies Window['electron'])
 
 function ipcInvoke<Key extends keyof EventPayloadMapping>(key: Key, ...args: any[]): Promise<EventPayloadMapping[Key]> {

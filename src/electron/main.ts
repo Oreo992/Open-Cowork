@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, dialog } from "electron"
+import { app, BrowserWindow, ipcMain, dialog, shell } from "electron"
 import { ipcMainHandle, isDev, DEV_PORT } from "./util.js";
 import { getPreloadPath, getUIPath, getIconPath } from "./pathResolver.js";
 import { getStaticData, pollResources } from "./test.js";
 import { handleClientEvent, sessions } from "./ipc-handlers.js";
 import { generateSessionTitle } from "./libs/util.js";
+import { checkEnvironment, getInstallInstructions } from "./libs/env-check.js";
 import type { ClientEvent } from "./types.js";
 import "./libs/claude-settings.js";
 
@@ -52,11 +53,26 @@ app.on("ready", () => {
         const result = await dialog.showOpenDialog(mainWindow, {
             properties: ['openDirectory']
         });
-        
+
         if (result.canceled) {
             return null;
         }
-        
+
         return result.filePaths[0];
+    });
+
+    // Handle environment check
+    ipcMainHandle("check-environment", () => {
+        return checkEnvironment();
+    });
+
+    // Handle get install instructions
+    ipcMainHandle("get-install-instructions", () => {
+        return getInstallInstructions();
+    });
+
+    // Handle opening external URL
+    ipcMainHandle("open-external", async (_: any, url: string) => {
+        await shell.openExternal(url);
     });
 })

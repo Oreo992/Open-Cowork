@@ -1,7 +1,9 @@
 import { query, type SDKMessage, type PermissionResult } from "@anthropic-ai/claude-agent-sdk";
 import type { ServerEvent } from "../types.js";
 import type { Session } from "./session-store.js";
-import { claudeCodePath, enhancedEnv} from "./util.js";
+import { claudeCodePath, enhancedEnv } from "./util.js";
+import { readdirSync, rmSync, statSync } from "fs";
+import { join } from "path";
 
 
 export type RunnerOptions = {
@@ -18,6 +20,33 @@ export type RunnerHandle = {
 
 const DEFAULT_CWD = process.cwd();
 
+// 临时文件匹配模式：tmpclaude-xxxx-cwd 格式
+const TMP_CLAUDE_PATTERN = /^tmpclaude-[a-f0-9]+-cwd$/i;
+
+/**
+ * 清理工作目录中的 Claude SDK 临时文件
+ */
+function cleanupTempFiles(cwd: string): void {
+  try {
+    const entries = readdirSync(cwd);
+    for (const entry of entries) {
+      if (TMP_CLAUDE_PATTERN.test(entry)) {
+        const fullPath = join(cwd, entry);
+        try {
+          const stat = statSync(fullPath);
+          if (stat.isDirectory()) {
+            rmSync(fullPath, { recursive: true, force: true });
+            console.log(`[Cleanup] Removed temp directory: ${entry}`);
+          }
+        } catch {
+          // 忽略单个文件的删除错误
+        }
+      }
+    }
+  } catch {
+    // 忽略目录读取错误
+  }
+}
 
 export async function runClaude(options: RunnerOptions): Promise<RunnerHandle> {
   const { prompt, session, resumeSessionId, onEvent, onSessionUpdate } = options;
@@ -44,6 +73,7 @@ export async function runClaude(options: RunnerOptions): Promise<RunnerHandle> {
         prompt,
         options: {
           cwd: session.cwd ?? DEFAULT_CWD,
+          additionalDirectories: session.additionalDirectories ?? [],
           resume: resumeSessionId,
           abortController,
           env: enhancedEnv,
@@ -51,6 +81,8 @@ export async function runClaude(options: RunnerOptions): Promise<RunnerHandle> {
           permissionMode: "bypassPermissions",
           includePartialMessages: true,
           allowDangerouslySkipPermissions: true,
+          // 启用 Skills、Slash Commands 和 CLAUDE.md 支持
+          settingSources: ["user", "project"],
           canUseTool: async (toolName, input, { signal }) => {
             // For AskUserQuestion, we need to wait for user response
             if (toolName === "AskUserQuestion") {
@@ -116,7 +148,13 @@ export async function runClaude(options: RunnerOptions): Promise<RunnerHandle> {
           payload: { sessionId: session.id, status: "completed", title: session.title }
         });
       }
+
+      // 会话结束后清理临时文件
+      cleanupTempFiles(session.cwd ?? DEFAULT_CWD);
     } catch (error) {
+      // 即使出错也尝试清理临时文件
+      cleanupTempFiles(session.cwd ?? DEFAULT_CWD);
+
       if ((error as Error).name === "AbortError") {
         // Session was aborted, don't treat as error
         return;

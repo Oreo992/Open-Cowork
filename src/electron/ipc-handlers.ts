@@ -65,6 +65,7 @@ export function handleClientEvent(event: ClientEvent) {
   if (event.type === "session.start") {
     const session = sessions.createSession({
       cwd: event.payload.cwd,
+      additionalDirectories: event.payload.additionalDirectories,
       title: event.payload.title,
       allowedTools: event.payload.allowedTools,
       prompt: event.payload.prompt

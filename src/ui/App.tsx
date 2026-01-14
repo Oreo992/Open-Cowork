@@ -4,32 +4,36 @@ import { useIPC } from "./hooks/useIPC";
 import { useAppStore } from "./store/useAppStore";
 import type { ServerEvent } from "./types";
 import { Sidebar } from "./components/Sidebar";
-import { StartSessionModal } from "./components/StartSessionModal";
-import { PromptInput, usePromptActions } from "./components/PromptInput";
+import { DirectorySelector } from "./components/DirectorySelector";
+import { PromptInput } from "./components/PromptInput";
 import { MessageCard } from "./components/EventCard";
 import MDContent from "./render/markdown";
+import { SetupGuide } from "./components/SetupGuide";
+import { WelcomeScreen } from "./components/WelcomeScreen";
 
 function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const partialMessageRef = useRef("");
   const [partialMessage, setPartialMessage] = useState("");
   const [showPartialMessage, setShowPartialMessage] = useState(false);
+  const [showSetupGuide, setShowSetupGuide] = useState(true);
 
   const sessions = useAppStore((s) => s.sessions);
   const activeSessionId = useAppStore((s) => s.activeSessionId);
-  const showStartModal = useAppStore((s) => s.showStartModal);
-  const setShowStartModal = useAppStore((s) => s.setShowStartModal);
+  const showDirectorySelector = useAppStore((s) => s.showDirectorySelector);
+  const setShowDirectorySelector = useAppStore((s) => s.setShowDirectorySelector);
   const globalError = useAppStore((s) => s.globalError);
   const setGlobalError = useAppStore((s) => s.setGlobalError);
   const historyRequested = useAppStore((s) => s.historyRequested);
   const markHistoryRequested = useAppStore((s) => s.markHistoryRequested);
   const resolvePermissionRequest = useAppStore((s) => s.resolvePermissionRequest);
   const handleServerEvent = useAppStore((s) => s.handleServerEvent);
-  const prompt = useAppStore((s) => s.prompt);
-  const setPrompt = useAppStore((s) => s.setPrompt);
   const cwd = useAppStore((s) => s.cwd);
   const setCwd = useAppStore((s) => s.setCwd);
-  const pendingStart = useAppStore((s) => s.pendingStart);
+  const additionalDirectories = useAppStore((s) => s.additionalDirectories);
+  const addAdditionalDirectory = useAppStore((s) => s.addAdditionalDirectory);
+  const removeAdditionalDirectory = useAppStore((s) => s.removeAdditionalDirectory);
+  const setPrompt = useAppStore((s) => s.setPrompt);
 
   // Helper function to extract partial message content
   const getPartialMessageContent = (eventMessage: any) => {
@@ -75,7 +79,6 @@ function App() {
   }, [handleServerEvent, handlePartialMessages]);
 
   const { connected, sendEvent } = useIPC(onEvent);
-  const { handleStartFromModal } = usePromptActions(sendEvent);
 
   const activeSession = activeSessionId ? sessions[activeSessionId] : undefined;
   const messages = activeSession?.messages ?? [];
@@ -101,12 +104,16 @@ function App() {
 
   const handleNewSession = useCallback(() => {
     useAppStore.getState().setActiveSessionId(null);
-    setShowStartModal(true);
-  }, [setShowStartModal]);
+    // 不自动弹出目录选择器，用户可以直接输入或点击目录指示器
+  }, []);
 
   const handleDeleteSession = useCallback((sessionId: string) => {
     sendEvent({ type: "session.delete", payload: { sessionId } });
   }, [sendEvent]);
+
+  const handlePromptSelect = useCallback((prompt: string) => {
+    setPrompt(prompt);
+  }, [setPrompt]);
 
   const handlePermissionResult = useCallback((toolUseId: string, result: PermissionResult) => {
     if (!activeSessionId) return;
@@ -133,10 +140,7 @@ function App() {
         <div className="flex-1 overflow-y-auto px-8 pb-40 pt-6">
           <div className="mx-auto max-w-3xl">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="text-lg font-medium text-ink-700">No messages yet</div>
-                <p className="mt-2 text-sm text-muted">Start a conversation with Claude Code</p>
-              </div>
+              <WelcomeScreen onPromptSelect={handlePromptSelect} />
             ) : (
               messages.map((msg, idx) => (
                 <MessageCard
@@ -181,16 +185,21 @@ function App() {
         <PromptInput sendEvent={sendEvent} />
       </main>
 
-      {showStartModal && (
-        <StartSessionModal
+      {showDirectorySelector && (
+        <DirectorySelector
           cwd={cwd}
-          prompt={prompt}
-          pendingStart={pendingStart}
+          additionalDirectories={additionalDirectories}
           onCwdChange={setCwd}
-          onPromptChange={setPrompt}
-          onStart={handleStartFromModal}
-          onClose={() => setShowStartModal(false)}
+          onAddDirectory={addAdditionalDirectory}
+          onRemoveDirectory={removeAdditionalDirectory}
+          onApply={() => setShowDirectorySelector(false)}
+          onClose={() => setShowDirectorySelector(false)}
         />
+      )}
+
+      {/* 初次启动环境检查引导 */}
+      {showSetupGuide && (
+        <SetupGuide onDismiss={() => setShowSetupGuide(false)} />
       )}
 
       {globalError && (

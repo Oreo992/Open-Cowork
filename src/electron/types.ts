@@ -26,6 +26,7 @@ export type SessionInfo = {
   status: SessionStatus;
   claudeSessionId?: string;
   cwd?: string;
+  additionalDirectories?: string[];
   createdAt: number;
   updatedAt: number;
 };
@@ -43,7 +44,7 @@ export type ServerEvent =
 
 // Client -> Server events
 export type ClientEvent =
-  | { type: "session.start"; payload: { title: string; prompt: string; cwd?: string; allowedTools?: string } }
+  | { type: "session.start"; payload: { title: string; prompt: string; cwd?: string; additionalDirectories?: string[]; allowedTools?: string } }
   | { type: "session.continue"; payload: { sessionId: string; prompt: string } }
   | { type: "session.stop"; payload: { sessionId: string } }
   | { type: "session.delete"; payload: { sessionId: string } }

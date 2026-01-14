@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b E:Open-Coworknode_modules@anthropic-aiclaude-agent-sdk)",
+      "Bash(findstr /N \"tmpclaude\" E:Open-Coworknode_modules@anthropic-aiclaude-agent-sdkcli.js)",
+      "Bash(E:/miniconda/envs/AI_ENV/python.exe -c \"import re; content=open\\(''E:/Open-Cowork/node_modules/@anthropic-ai/claude-agent-sdk/cli.js'',''r'',encoding=''utf-8''\\).read\\(\\); matches=re.findall\\(r''tmpclaude[a-zA-Z0-9_-]{0,30}'', content\\); print\\(set\\(matches\\)\\)\")",
+      "Bash(bun run build:*)",
+      "Bash(bun run:*)",
+      "Bash(npx electron-rebuild:*)",
+      "Bash(npx prebuild-install:*)"
+    ]
+  }
+}

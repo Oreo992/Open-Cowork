@@ -47,19 +47,25 @@ export const enhancedEnv = getEnhancedEnv();
 export const generateSessionTitle = async (userIntent: string | null) => {
   if (!userIntent) return "New Session";
 
-  const result: SDKResultMessage = await unstable_v2_prompt(
-    `please analynis the following user input to generate a short but clearly title to identify this conversation theme:
-    ${userIntent}
-    directly output the title, do not include any other content`, {
-    model: claudeCodeEnv.ANTHROPIC_MODEL,
-    env: enhancedEnv,
-    pathToClaudeCodeExecutable: claudeCodePath,
-  });
+  try {
+    const result: SDKResultMessage = await unstable_v2_prompt(
+      `please analynis the following user input to generate a short but clearly title to identify this conversation theme:
+      ${userIntent}
+      directly output the title, do not include any other content`, {
+      model: claudeCodeEnv.ANTHROPIC_MODEL || "claude-sonnet-4-20250514",
+      env: enhancedEnv,
+      pathToClaudeCodeExecutable: claudeCodePath,
+    });
 
-  if (result.subtype === "success") {
-    return result.result;
+    if (result.subtype === "success") {
+      return result.result;
+    }
+  } catch (error) {
+    console.error("Failed to generate session title:", error);
   }
 
-
-  return "New Session";
+  // Fallback: 从用户输入生成简短标题
+  const trimmed = userIntent.trim();
+  if (trimmed.length <= 30) return trimmed;
+  return trimmed.slice(0, 27) + "...";
 };

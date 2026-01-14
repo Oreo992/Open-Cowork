@@ -12,6 +12,7 @@ export type SessionView = {
   title: string;
   status: SessionStatus;
   cwd?: string;
+  additionalDirectories?: string[];
   messages: StreamMessage[];
   permissionRequests: PermissionRequest[];
   lastPrompt?: string;
@@ -25,17 +26,22 @@ interface AppState {
   activeSessionId: string | null;
   prompt: string;
   cwd: string;
+  additionalDirectories: string[];
   pendingStart: boolean;
   globalError: string | null;
   sessionsLoaded: boolean;
-  showStartModal: boolean;
+  showDirectorySelector: boolean;
   historyRequested: Set<string>;
 
   setPrompt: (prompt: string) => void;
   setCwd: (cwd: string) => void;
+  setAdditionalDirectories: (dirs: string[]) => void;
+  addAdditionalDirectory: (dir: string) => void;
+  removeAdditionalDirectory: (dir: string) => void;
+  clearAdditionalDirectories: () => void;
   setPendingStart: (pending: boolean) => void;
   setGlobalError: (error: string | null) => void;
-  setShowStartModal: (show: boolean) => void;
+  setShowDirectorySelector: (show: boolean) => void;
   setActiveSessionId: (id: string | null) => void;
   markHistoryRequested: (sessionId: string) => void;
   resolvePermissionRequest: (sessionId: string, toolUseId: string) => void;
@@ -51,17 +57,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeSessionId: null,
   prompt: "",
   cwd: "",
+  additionalDirectories: [],
   pendingStart: false,
   globalError: null,
   sessionsLoaded: false,
-  showStartModal: false,
+  showDirectorySelector: false,
   historyRequested: new Set(),
 
   setPrompt: (prompt) => set({ prompt }),
   setCwd: (cwd) => set({ cwd }),
+  setAdditionalDirectories: (additionalDirectories) => set({ additionalDirectories }),
+  addAdditionalDirectory: (dir) => set((state) => ({
+    additionalDirectories: state.additionalDirectories.includes(dir)
+      ? state.additionalDirectories
+      : [...state.additionalDirectories, dir]
+  })),
+  removeAdditionalDirectory: (dir) => set((state) => ({
+    additionalDirectories: state.additionalDirectories.filter((d) => d !== dir)
+  })),
+  clearAdditionalDirectories: () => set({ additionalDirectories: [] }),
   setPendingStart: (pendingStart) => set({ pendingStart }),
   setGlobalError: (globalError) => set({ globalError }),
-  setShowStartModal: (showStartModal) => set({ showStartModal }),
+  setShowDirectorySelector: (showDirectorySelector) => set({ showDirectorySelector }),
   setActiveSessionId: (id) => set({ activeSessionId: id }),
 
   markHistoryRequested: (sessionId) => {
@@ -101,6 +118,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             status: session.status,
             title: session.title,
             cwd: session.cwd,
+            additionalDirectories: session.additionalDirectories,
             createdAt: session.createdAt,
             updatedAt: session.updatedAt
           };
@@ -108,10 +126,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
         set({ sessions: nextSessions, sessionsLoaded: true });
 
-        const hasSessions = event.payload.sessions.length > 0;
-        set({ showStartModal: !hasSessions });
+        // 不再自动弹出模态框，用户可以直接在输入框输入
+        // const hasSessions = event.payload.sessions.length > 0;
 
-        if (!hasSessions) {
+        if (event.payload.sessions.length === 0) {
           get().setActiveSessionId(null);
         }
 
@@ -170,7 +188,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
         if (state.pendingStart) {
           get().setActiveSessionId(sessionId);
-          set({ pendingStart: false, showStartModal: false });
+          set({ pendingStart: false, showDirectorySelector: false });
         }
         break;
       }
@@ -182,8 +200,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const nextSessions = { ...state.sessions };
         delete nextSessions[sessionId];
         set({
-          sessions: nextSessions,
-          showStartModal: Object.keys(nextSessions).length === 0
+          sessions: nextSessions
         });
         if (state.activeSessionId === sessionId) {
           const remaining = Object.values(nextSessions).sort(

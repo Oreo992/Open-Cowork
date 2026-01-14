@@ -14,6 +14,7 @@ export type Session = {
   claudeSessionId?: string;
   status: SessionStatus;
   cwd?: string;
+  additionalDirectories?: string[];
   allowedTools?: string;
   lastPrompt?: string;
   pendingPermissions: Map<string, PendingPermission>;
@@ -25,6 +26,7 @@ export type StoredSession = {
   title: string;
   status: SessionStatus;
   cwd?: string;
+  additionalDirectories?: string[];
   allowedTools?: string;
   lastPrompt?: string;
   claudeSessionId?: string;
@@ -47,7 +49,7 @@ export class SessionStore {
     this.loadSessions();
   }
 
-  createSession(options: { cwd?: string; allowedTools?: string; prompt?: string; title: string }): Session {
+  createSession(options: { cwd?: string; additionalDirectories?: string[]; allowedTools?: string; prompt?: string; title: string }): Session {
     const id = crypto.randomUUID();
     const now = Date.now();
     const session: Session = {
@@ -55,6 +57,7 @@ export class SessionStore {
       title: options.title,
       status: "idle",
       cwd: options.cwd,
+      additionalDirectories: options.additionalDirectories,
       allowedTools: options.allowedTools,
       lastPrompt: options.prompt,
       pendingPermissions: new Map()
@@ -63,8 +66,8 @@ export class SessionStore {
     this.db
       .prepare(
         `insert into sessions
-          (id, title, claude_session_id, status, cwd, allowed_tools, last_prompt, created_at, updated_at)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (id, title, claude_session_id, status, cwd, additional_directories, allowed_tools, last_prompt, created_at, updated_at)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
@@ -72,6 +75,7 @@ export class SessionStore {
         session.claudeSessionId ?? null,
         session.status,
         session.cwd ?? null,
+        session.additionalDirectories ? JSON.stringify(session.additionalDirectories) : null,
         session.allowedTools ?? null,
         session.lastPrompt ?? null,
         now,
@@ -87,7 +91,7 @@ export class SessionStore {
   listSessions(): StoredSession[] {
     const rows = this.db
       .prepare(
-        `select id, title, claude_session_id, status, cwd, allowed_tools, last_prompt, created_at, updated_at
+        `select id, title, claude_session_id, status, cwd, additional_directories, allowed_tools, last_prompt, created_at, updated_at
          from sessions
          order by updated_at desc`
       )
@@ -97,6 +101,7 @@ export class SessionStore {
       title: String(row.title),
       status: row.status as SessionStatus,
       cwd: row.cwd ? String(row.cwd) : undefined,
+      additionalDirectories: row.additional_directories ? JSON.parse(String(row.additional_directories)) as string[] : undefined,
       allowedTools: row.allowed_tools ? String(row.allowed_tools) : undefined,
       lastPrompt: row.last_prompt ? String(row.last_prompt) : undefined,
       claudeSessionId: row.claude_session_id ? String(row.claude_session_id) : undefined,
@@ -122,7 +127,7 @@ export class SessionStore {
   getSessionHistory(id: string): SessionHistory | null {
     const sessionRow = this.db
       .prepare(
-        `select id, title, claude_session_id, status, cwd, allowed_tools, last_prompt, created_at, updated_at
+        `select id, title, claude_session_id, status, cwd, additional_directories, allowed_tools, last_prompt, created_at, updated_at
          from sessions
          where id = ?`
       )
@@ -142,6 +147,7 @@ export class SessionStore {
         title: String(sessionRow.title),
         status: sessionRow.status as SessionStatus,
         cwd: sessionRow.cwd ? String(sessionRow.cwd) : undefined,
+        additionalDirectories: sessionRow.additional_directories ? JSON.parse(String(sessionRow.additional_directories)) as string[] : undefined,
         allowedTools: sessionRow.allowed_tools ? String(sessionRow.allowed_tools) : undefined,
         lastPrompt: sessionRow.last_prompt ? String(sessionRow.last_prompt) : undefined,
         claudeSessionId: sessionRow.claude_session_id ? String(sessionRow.claude_session_id) : undefined,
@@ -193,6 +199,7 @@ export class SessionStore {
       claudeSessionId: "claude_session_id",
       status: "status",
       cwd: "cwd",
+      additionalDirectories: "additional_directories",
       allowedTools: "allowed_tools",
       lastPrompt: "last_prompt"
     } as const;
@@ -202,7 +209,11 @@ export class SessionStore {
       if (!column) continue;
       fields.push(`${column} = ?`);
       const value = updates[key];
-      values.push(value === undefined ? null : (value as string));
+      if (key === "additionalDirectories" && Array.isArray(value)) {
+        values.push(JSON.stringify(value));
+      } else {
+        values.push(value === undefined ? null : (value as string));
+      }
     }
 
     if (fields.length === 0) return;
@@ -223,12 +234,19 @@ export class SessionStore {
         claude_session_id text,
         status text not null,
         cwd text,
+        additional_directories text,
         allowed_tools text,
         last_prompt text,
         created_at integer not null,
         updated_at integer not null
       )`
     );
+    // 添加 additional_directories 列（如果不存在）
+    try {
+      this.db.exec(`alter table sessions add column additional_directories text`);
+    } catch {
+      // 列已存在，忽略错误
+    }
     this.db.exec(
       `create table if not exists messages (
         id text primary key,
@@ -244,7 +262,7 @@ export class SessionStore {
   private loadSessions(): void {
     const rows = this.db
       .prepare(
-        `select id, title, claude_session_id, status, cwd, allowed_tools, last_prompt
+        `select id, title, claude_session_id, status, cwd, additional_directories, allowed_tools, last_prompt
          from sessions`
       )
       .all();
@@ -255,6 +273,7 @@ export class SessionStore {
         claudeSessionId: row.claude_session_id ? String(row.claude_session_id) : undefined,
         status: row.status as SessionStatus,
         cwd: row.cwd ? String(row.cwd) : undefined,
+        additionalDirectories: row.additional_directories ? JSON.parse(String(row.additional_directories)) as string[] : undefined,
         allowedTools: row.allowed_tools ? String(row.allowed_tools) : undefined,
         lastPrompt: row.last_prompt ? String(row.last_prompt) : undefined,
         pendingPermissions: new Map()
