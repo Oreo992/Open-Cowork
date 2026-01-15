@@ -1,4 +1,4 @@
-import { execSync, exec } from "child_process";
+import { execSync } from "child_process";
 import { existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
@@ -12,14 +12,45 @@ export interface EnvCheckResult {
 }
 
 /**
+ * Get enhanced PATH for finding global npm packages
+ */
+function getEnhancedPath(): string {
+  const home = homedir();
+  const currentPath = process.env.PATH || "";
+
+  const additionalPaths = process.platform === "win32"
+    ? [
+        join(process.env.APPDATA || "", "npm"),
+        join(home, "AppData", "Roaming", "npm"),
+        join(process.env.LOCALAPPDATA || "", "pnpm"),
+        join(home, ".bun", "bin"),
+      ]
+    : [
+        "/usr/local/bin",
+        "/opt/homebrew/bin",
+        join(home, ".npm-global", "bin"),
+        join(home, ".bun", "bin"),
+        join(home, ".nvm", "versions", "node", "v20.0.0", "bin"),
+        join(home, ".volta", "bin"),
+        "/usr/bin",
+        "/bin",
+      ];
+
+  const separator = process.platform === "win32" ? ";" : ":";
+  return [...additionalPaths.filter(p => p), currentPath].join(separator);
+}
+
+/**
  * Check if Claude Code CLI is installed
  */
 function checkClaudeCodeInstalled(): { installed: boolean; version: string | null } {
   try {
+    const enhancedPath = getEnhancedPath();
     const result = execSync("claude --version", {
       encoding: "utf-8",
       timeout: 10000,
-      windowsHide: true
+      windowsHide: true,
+      env: { ...process.env, PATH: enhancedPath }
     }).trim();
     return { installed: true, version: result };
   } catch (error) {

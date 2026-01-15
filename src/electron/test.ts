@@ -8,6 +8,8 @@ const POLLING_INTERVAL = 500;
 
 export function pollResources(mainWindow: BrowserWindow) {
     setInterval(async () => {
+        if (mainWindow.isDestroyed()) return;
+
         const cpuUsage = await getCPUUsage();
         const storageData = getStorageData();
         const ramUsage = getRamUsage();

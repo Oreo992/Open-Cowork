@@ -9,6 +9,8 @@ import type { ClientEvent } from "./types.js";
 import "./libs/claude-settings.js";
 
 app.on("ready", () => {
+    const isMac = process.platform === "darwin";
+
     const mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
@@ -18,9 +20,10 @@ app.on("ready", () => {
             preload: getPreloadPath(),
         },
         icon: getIconPath(),
-        titleBarStyle: "hiddenInset",
+        titleBarStyle: isMac ? "hiddenInset" : "default",
+        frame: !isMac, // Windows 使用默认窗口框架
         backgroundColor: "#FAF9F6",
-        trafficLightPosition: { x: 15, y: 18 }
+        ...(isMac ? { trafficLightPosition: { x: 15, y: 18 } } : {})
     });
 
     if (isDev()) mainWindow.loadURL(`http://localhost:${DEV_PORT}`)
@@ -50,8 +53,14 @@ app.on("ready", () => {
 
     // Handle directory selection
     ipcMainHandle("select-directory", async () => {
+        // Ensure window is focused before showing dialog
+        if (!mainWindow.isDestroyed()) {
+            mainWindow.focus();
+        }
+
         const result = await dialog.showOpenDialog(mainWindow, {
-            properties: ['openDirectory']
+            properties: ['openDirectory'],
+            title: '选择工作目录'
         });
 
         if (result.canceled) {
