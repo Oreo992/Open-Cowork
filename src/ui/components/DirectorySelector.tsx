@@ -41,19 +41,19 @@ export function DirectorySelector({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/20 px-4 py-8 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-2xl border border-ink-900/5 bg-surface p-6 shadow-elevated">
         <div className="flex items-center justify-between">
-          <div className="text-base font-semibold text-ink-800">Select Working Directories</div>
-          <button className="rounded-full p-1.5 text-muted hover:bg-surface-tertiary hover:text-ink-700 transition-colors" onClick={onClose} aria-label="Close">
+          <div className="text-base font-semibold text-ink-800">选择工作目录</div>
+          <button className="rounded-full p-1.5 text-muted hover:bg-surface-tertiary hover:text-ink-700 transition-colors" onClick={onClose} aria-label="关闭">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <p className="mt-2 text-sm text-muted">Choose the directories for Claude to work with.</p>
+        <p className="mt-2 text-sm text-muted">选择 Claude 要使用的工作目录。</p>
 
         <div className="mt-5 grid gap-4">
           {/* Main Directory */}
           <label className="grid gap-1.5">
-            <span className="text-xs font-medium text-muted">Main Directory</span>
+            <span className="text-xs font-medium text-muted">主目录</span>
             <div className="flex gap-2">
               <input
                 className="flex-1 rounded-xl border border-ink-900/10 bg-surface-secondary px-4 py-2.5 text-sm text-ink-800 placeholder:text-muted-light focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/20 transition-colors"
@@ -66,12 +66,12 @@ export function DirectorySelector({
                 onClick={handleSelectDirectory}
                 className="rounded-xl border border-ink-900/10 bg-surface px-3 py-2 text-sm text-ink-700 hover:bg-surface-tertiary transition-colors"
               >
-                Browse...
+                浏览...
               </button>
             </div>
             {recentCwds.length > 0 && (
               <div className="mt-2 grid gap-2">
-                <div className="text-[11px] font-medium uppercase tracking-wide text-muted-light">Recent</div>
+                <div className="text-[11px] font-medium uppercase tracking-wide text-muted-light">最近使用</div>
                 <div className="flex flex-wrap gap-2">
                   {recentCwds.map((path) => (
                     <button
@@ -91,8 +91,8 @@ export function DirectorySelector({
 
           {/* Additional Directories */}
           <div className="grid gap-1.5">
-            <span className="text-xs font-medium text-muted">Additional Directories (Optional)</span>
-            <p className="text-xs text-muted-light">Add more directories for cross-folder operations.</p>
+            <span className="text-xs font-medium text-muted">附加目录（可选）</span>
+            <p className="text-xs text-muted-light">添加更多目录以支持跨文件夹操作。</p>
 
             {additionalDirectories.length > 0 && (
               <div className="mt-2 space-y-2">
@@ -103,7 +103,7 @@ export function DirectorySelector({
                       type="button"
                       onClick={() => onRemoveDirectory(dir)}
                       className="rounded-full p-1 text-muted hover:bg-error/10 hover:text-error transition-colors"
-                      aria-label="Remove directory"
+                      aria-label="移除目录"
                     >
                       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M18 6L6 18M6 6l12 12" />
@@ -122,7 +122,7 @@ export function DirectorySelector({
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 5v14M5 12h14" />
               </svg>
-              Add Directory
+              添加目录
             </button>
           </div>
 
@@ -130,7 +130,7 @@ export function DirectorySelector({
             className="flex flex-col items-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-soft hover:bg-accent-hover transition-colors"
             onClick={onApply}
           >
-            Apply
+            应用
           </button>
         </div>
       </div>

@@ -53,21 +53,48 @@ app.on("ready", () => {
 
     // Handle directory selection
     ipcMainHandle("select-directory", async () => {
-        // Ensure window is focused before showing dialog
-        if (!mainWindow.isDestroyed()) {
-            mainWindow.focus();
-        }
+        console.log('[select-directory] Handler called');
 
-        const result = await dialog.showOpenDialog(mainWindow, {
-            properties: ['openDirectory'],
-            title: '选择工作目录'
-        });
+        // Get the focused window or the first available window
+        let win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
 
-        if (result.canceled) {
+        if (!win || win.isDestroyed()) {
+            console.error('[select-directory] No window available');
             return null;
         }
 
-        return result.filePaths[0];
+        // Ensure window is visible and focused before showing dialog
+        if (win.isMinimized()) win.restore();
+        win.show();
+        win.focus();
+
+        // Wait a bit for window to be fully ready (helps with portable exe)
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Re-get window reference after delay
+        win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+        if (!win || win.isDestroyed()) {
+            console.error('[select-directory] Window lost after delay');
+            return null;
+        }
+
+        try {
+            console.log('[select-directory] Showing dialog...');
+            const result = await dialog.showOpenDialog(win, {
+                properties: ['openDirectory'],
+                title: '选择工作目录'
+            });
+            console.log('[select-directory] Dialog result:', result);
+
+            if (result.canceled || result.filePaths.length === 0) {
+                return null;
+            }
+
+            return result.filePaths[0];
+        } catch (error) {
+            console.error('[select-directory] Failed to show directory dialog:', error);
+            return null;
+        }
     });
 
     // Handle environment check

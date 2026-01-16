@@ -12,7 +12,7 @@ export default function MDContent({ text }: { text: string }) {
         h1: (props) => <h1 className="mt-4 text-xl font-semibold text-ink-900" {...props} />,
         h2: (props) => <h2 className="mt-4 text-lg font-semibold text-ink-900" {...props} />,
         h3: (props) => <h3 className="mt-3 text-base font-semibold text-ink-800" {...props} />,
-        p: (props) => <p className="mt-2 text-base leading-relaxed text-ink-700" {...props} />,
+        p: (props) => <p className="mt-2 first:mt-0 text-base leading-relaxed text-ink-700" {...props} />,
         ul: (props) => <ul className="mt-2 ml-4 grid list-disc gap-1" {...props} />,
         ol: (props) => <ol className="mt-2 ml-4 grid list-decimal gap-1" {...props} />,
         li: (props) => <li className="min-w-0 text-ink-700" {...props} />,

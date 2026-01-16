@@ -89,21 +89,46 @@ Agent Cowork is your AI partner that can:
 
 ---
 
+### 🎨 Model Switching
+
+* Switch between **Sonnet / Opus / Haiku** models
+* Freely select model for new sessions
+* Model selection locks after session starts
+
+---
+
 ### 📂 Session Management
 
 * Create sessions with **custom working directories**
+* Support **additional directories** for cross-folder operations
 * Resume any previous conversation
 * Complete local session history (stored in SQLite)
 * Safe deletion and automatic persistence
 
 ---
 
+### 📁 Workspace File Tracking
+
+* Automatically track **new/modified files** in sessions
+* Display workspace files above the input box
+* Hover to view full file paths
+
+---
+
 ### 🎯 Real-Time Streaming Output
 
 * **Token-by-token streaming output**
-* View Claude’s reasoning process
+* View Claude's reasoning process
 * Markdown rendering with syntax-highlighted code
 * Visualized tool calls with status indicators
+
+---
+
+### ⚡ Skills Support
+
+* Fully compatible with Claude Code **Skills**
+* Auto-loads Skills from `~/.claude/settings.json`
+* Supports project-level Skills configuration
 
 ---
 
@@ -166,6 +191,10 @@ bun run build
 
 Planned features:
 
+* ✅ Skills support
+* ✅ Model switching (Sonnet/Opus/Haiku)
+* ✅ Workspace file tracking
+* ✅ Additional directories support
 * GUI-based configuration for models and API keys
 * 🚧 More features coming soon
 

@@ -68,7 +68,8 @@ export function handleClientEvent(event: ClientEvent) {
       additionalDirectories: event.payload.additionalDirectories,
       title: event.payload.title,
       allowedTools: event.payload.allowedTools,
-      prompt: event.payload.prompt
+      prompt: event.payload.prompt,
+      model: event.payload.model
     });
 
     sessions.updateSession(session.id, {

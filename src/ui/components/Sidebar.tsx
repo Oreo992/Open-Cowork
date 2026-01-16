@@ -21,7 +21,7 @@ export function Sidebar({
   const closeTimerRef = useRef<number | null>(null);
 
   const formatCwd = (cwd?: string) => {
-    if (!cwd) return "Working dir unavailable";
+    if (!cwd) return "工作目录未设置";
     const parts = cwd.split(/[\\/]+/).filter(Boolean);
     const tail = parts.slice(-2).join("/");
     return `/${tail || cwd}`;
@@ -77,12 +77,12 @@ export function Sidebar({
         className="w-full rounded-xl border border-ink-900/10 bg-surface px-4 py-2.5 text-sm font-medium text-ink-700 hover:bg-surface-tertiary hover:border-ink-900/20 transition-colors"
         onClick={onNewSession}
       >
-        + New Task
+        + 新任务
       </button>
       <div className="flex flex-col gap-2 overflow-y-auto">
         {sessionList.length === 0 && (
           <div className="rounded-xl border border-ink-900/5 bg-surface px-4 py-5 text-center text-xs text-muted">
-            No sessions yet. Start by sending a prompt.
+            暂无会话，发送消息开始
           </div>
         )}
         {sessionList.map((session) => (
@@ -119,13 +119,13 @@ export function Sidebar({
                       <svg viewBox="0 0 24 24" className="h-4 w-4 text-error/80" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <path d="M4 7h16" /><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /><path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9l1-12" />
                       </svg>
-                      Delete this session
+                      删除此会话
                     </DropdownMenu.Item>
                     <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-700 outline-none hover:bg-ink-900/5" onSelect={() => setResumeSessionId(session.id)}>
                       <svg viewBox="0 0 24 24" className="h-4 w-4 text-ink-500" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <path d="M4 5h16v14H4z" /><path d="M7 9h10M7 12h6" /><path d="M13 15l3 2-3 2" />
                       </svg>
-                      Resume in Claude Code
+                      在 Claude Code 中恢复
                     </DropdownMenu.Item>
                   </DropdownMenu.Content>
                 </DropdownMenu.Portal>
@@ -139,7 +139,7 @@ export function Sidebar({
           <Dialog.Overlay className="fixed inset-0 bg-ink-900/40 backdrop-blur-sm" />
           <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-xl">
             <div className="flex items-start justify-between gap-4">
-              <Dialog.Title className="text-lg font-semibold text-ink-800">Resume</Dialog.Title>
+              <Dialog.Title className="text-lg font-semibold text-ink-800">恢复会话</Dialog.Title>
               <Dialog.Close asChild>
                 <button className="rounded-full p-1 text-ink-500 hover:bg-ink-900/10" aria-label="Close dialog">
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">

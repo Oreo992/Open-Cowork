@@ -17,6 +17,7 @@ export type Session = {
   additionalDirectories?: string[];
   allowedTools?: string;
   lastPrompt?: string;
+  model?: string;
   pendingPermissions: Map<string, PendingPermission>;
   abortController?: AbortController;
 };
@@ -49,7 +50,7 @@ export class SessionStore {
     this.loadSessions();
   }
 
-  createSession(options: { cwd?: string; additionalDirectories?: string[]; allowedTools?: string; prompt?: string; title: string }): Session {
+  createSession(options: { cwd?: string; additionalDirectories?: string[]; allowedTools?: string; prompt?: string; title: string; model?: string }): Session {
     const id = crypto.randomUUID();
     const now = Date.now();
     const session: Session = {
@@ -60,6 +61,7 @@ export class SessionStore {
       additionalDirectories: options.additionalDirectories,
       allowedTools: options.allowedTools,
       lastPrompt: options.prompt,
+      model: options.model,
       pendingPermissions: new Map()
     };
     this.sessions.set(id, session);

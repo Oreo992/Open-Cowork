@@ -2,8 +2,15 @@ import { query, type SDKMessage, type PermissionResult } from "@anthropic-ai/cla
 import type { ServerEvent } from "../types.js";
 import type { Session } from "./session-store.js";
 import { claudeCodePath, enhancedEnv } from "./util.js";
+import { claudeCodeEnv } from "./claude-settings.js";
 import { readdirSync, rmSync, statSync } from "fs";
 import { join } from "path";
+
+const MODEL_MAP: Record<string, string> = {
+  sonnet: claudeCodeEnv.ANTHROPIC_DEFAULT_SONNET_MODEL || "claude-sonnet-4-20250514",
+  opus: claudeCodeEnv.ANTHROPIC_DEFAULT_OPUS_MODEL || "claude-opus-4-20250514",
+  haiku: claudeCodeEnv.ANTHROPIC_DEFAULT_HAIKU_MODEL || "claude-haiku-3-5-20241022"
+};
 
 
 export type RunnerOptions = {
@@ -69,6 +76,7 @@ export async function runClaude(options: RunnerOptions): Promise<RunnerHandle> {
   // Start the query in the background
   (async () => {
     try {
+      const modelId = session.model ? MODEL_MAP[session.model] : undefined;
       const q = query({
         prompt,
         options: {
@@ -78,9 +86,9 @@ export async function runClaude(options: RunnerOptions): Promise<RunnerHandle> {
           abortController,
           env: enhancedEnv,
           pathToClaudeCodeExecutable: claudeCodePath,
-          permissionMode: "bypassPermissions",
+          permissionMode: "default",
           includePartialMessages: true,
-          allowDangerouslySkipPermissions: true,
+          model: modelId,
           // 启用 Skills、Slash Commands 和 CLAUDE.md 支持
           settingSources: ["user", "project"],
           canUseTool: async (toolName, input, { signal }) => {

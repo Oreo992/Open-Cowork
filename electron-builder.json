@@ -21,8 +21,14 @@
     },
     "win": {
         "target": [
+            "nsis",
             "portable"
-        ],
-        "rcedit": false
+        ]
+    },
+    "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true,
+        "createDesktopShortcut": true,
+        "createStartMenuShortcut": true
     }
 }

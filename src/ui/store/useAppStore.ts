@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { ServerEvent, SessionStatus, StreamMessage } from "../types";
 
+export type ModelType = "sonnet" | "opus" | "haiku";
+
 export type PermissionRequest = {
   toolUseId: string;
   toolName: string;
@@ -15,6 +17,7 @@ export type SessionView = {
   additionalDirectories?: string[];
   messages: StreamMessage[];
   permissionRequests: PermissionRequest[];
+  workspaceFiles: string[];
   lastPrompt?: string;
   createdAt?: number;
   updatedAt?: number;
@@ -32,6 +35,7 @@ interface AppState {
   sessionsLoaded: boolean;
   showDirectorySelector: boolean;
   historyRequested: Set<string>;
+  selectedModel: ModelType;
 
   setPrompt: (prompt: string) => void;
   setCwd: (cwd: string) => void;
@@ -43,13 +47,32 @@ interface AppState {
   setGlobalError: (error: string | null) => void;
   setShowDirectorySelector: (show: boolean) => void;
   setActiveSessionId: (id: string | null) => void;
+  setSelectedModel: (model: ModelType) => void;
   markHistoryRequested: (sessionId: string) => void;
   resolvePermissionRequest: (sessionId: string, toolUseId: string) => void;
   handleServerEvent: (event: ServerEvent) => void;
 }
 
 function createSession(id: string): SessionView {
-  return { id, title: "", status: "idle", messages: [], permissionRequests: [], hydrated: false };
+  return { id, title: "", status: "idle", messages: [], permissionRequests: [], workspaceFiles: [], hydrated: false };
+}
+
+// 从消息中提取文件路径
+function extractFilePaths(message: StreamMessage): string[] {
+  if (!message || typeof message !== "object") return [];
+  if (!("type" in message) || message.type !== "assistant") return [];
+
+  const assistantMsg = message as { type: "assistant"; message: { content: Array<{ type: string; name?: string; input?: { file_path?: string } }> } };
+  const paths: string[] = [];
+
+  for (const content of assistantMsg.message.content) {
+    if (content.type === "tool_use" && (content.name === "Write" || content.name === "Edit")) {
+      const filePath = content.input?.file_path;
+      if (filePath) paths.push(filePath);
+    }
+  }
+
+  return paths;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -63,6 +86,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   sessionsLoaded: false,
   showDirectorySelector: false,
   historyRequested: new Set(),
+  selectedModel: "sonnet",
 
   setPrompt: (prompt) => set({ prompt }),
   setCwd: (cwd) => set({ cwd }),
@@ -80,6 +104,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setGlobalError: (globalError) => set({ globalError }),
   setShowDirectorySelector: (showDirectorySelector) => set({ showDirectorySelector }),
   setActiveSessionId: (id) => set({ activeSessionId: id }),
+  setSelectedModel: (selectedModel) => set({ selectedModel }),
 
   markHistoryRequested: (sessionId) => {
     set((state) => {
@@ -213,12 +238,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       case "stream.message": {
         const { sessionId, message } = event.payload;
+        const newFiles = extractFilePaths(message);
         set((state) => {
           const existing = state.sessions[sessionId] ?? createSession(sessionId);
+          const updatedFiles = newFiles.length > 0
+            ? [...new Set([...existing.workspaceFiles, ...newFiles])]
+            : existing.workspaceFiles;
           return {
             sessions: {
               ...state.sessions,
-              [sessionId]: { ...existing, messages: [...existing.messages, message] }
+              [sessionId]: { ...existing, messages: [...existing.messages, message], workspaceFiles: updatedFiles }
             }
           };
         });
