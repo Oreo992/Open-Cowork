@@ -20,6 +20,8 @@ export type Session = {
   model?: string;
   pendingPermissions: Map<string, PendingPermission>;
   abortController?: AbortController;
+  /** 本次会话中已允许的工具集合 (用于"允许本次会话"功能) */
+  sessionAllowedTools: Set<string>;
 };
 
 export type StoredSession = {
@@ -62,7 +64,8 @@ export class SessionStore {
       allowedTools: options.allowedTools,
       lastPrompt: options.prompt,
       model: options.model,
-      pendingPermissions: new Map()
+      pendingPermissions: new Map(),
+      sessionAllowedTools: new Set()
     };
     this.sessions.set(id, session);
     this.db
@@ -278,7 +281,8 @@ export class SessionStore {
         additionalDirectories: row.additional_directories ? JSON.parse(String(row.additional_directories)) as string[] : undefined,
         allowedTools: row.allowed_tools ? String(row.allowed_tools) : undefined,
         lastPrompt: row.last_prompt ? String(row.last_prompt) : undefined,
-        pendingPermissions: new Map()
+        pendingPermissions: new Map(),
+        sessionAllowedTools: new Set()
       };
       this.sessions.set(session.id, session);
     }

@@ -273,8 +273,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       case "permission.request": {
         const { sessionId, toolUseId, toolName, input } = event.payload;
+        console.log(`[permission.request] Received: tool=${toolName}, toolUseId=${toolUseId}`);
         set((state) => {
           const existing = state.sessions[sessionId] ?? createSession(sessionId);
+          console.log(`[permission.request] Adding to session ${sessionId}, current requests: ${existing.permissionRequests.length}`);
           return {
             sessions: {
               ...state.sessions,

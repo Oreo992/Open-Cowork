@@ -143,30 +143,91 @@ export function DecisionPanel({
     );
   }
 
+  // 获取工具的友好名称和描述
+  const getToolInfo = (toolName: string, input: unknown) => {
+    const bashInput = input as { command?: string } | undefined;
+    const writeInput = input as { file_path?: string; content?: string } | undefined;
+    const editInput = input as { file_path?: string } | undefined;
+
+    switch (toolName) {
+      case "Bash":
+        return {
+          name: "执行命令",
+          description: bashInput?.command || "执行 Shell 命令",
+          isDangerous: /\b(rm|rmdir|del|rd|Remove-Item|ri|unlink)\b/i.test(bashInput?.command || "")
+        };
+      case "Write":
+        return {
+          name: "写入文件",
+          description: writeInput?.file_path || "创建或覆盖文件",
+          isDangerous: false
+        };
+      case "Edit":
+      case "MultiEdit":
+        return {
+          name: "编辑文件",
+          description: editInput?.file_path || "修改文件内容",
+          isDangerous: false
+        };
+      default:
+        return {
+          name: toolName,
+          description: "执行操作",
+          isDangerous: false
+        };
+    }
+  };
+
+  const toolInfo = getToolInfo(request.toolName, request.input);
+
   return (
-    <div className="rounded-2xl border border-accent/20 bg-accent-subtle p-5">
-      <div className="text-xs font-semibold text-accent">Permission Request</div>
+    <div className={`rounded-2xl border p-5 ${toolInfo.isDangerous ? "border-red-300 bg-red-50" : "border-accent/20 bg-accent-subtle"}`}>
+      <div className={`text-xs font-semibold ${toolInfo.isDangerous ? "text-red-600" : "text-accent"}`}>
+        {toolInfo.isDangerous ? "⚠️ 危险操作请求" : "🔐 权限请求"}
+      </div>
       <p className="mt-2 text-sm text-ink-700">
-        Claude wants to use: <span className="font-medium">{request.toolName}</span>
+        Claude 想要<span className="font-medium">{toolInfo.name}</span>
       </p>
       <div className="mt-3 rounded-xl bg-surface-tertiary p-3">
         <pre className="text-xs text-ink-600 font-mono whitespace-pre-wrap break-words max-h-40 overflow-auto">
           {JSON.stringify(request.input, null, 2)}
         </pre>
       </div>
-      <div className="mt-4 flex flex-wrap gap-3">
+      {toolInfo.isDangerous && (
+        <div className="mt-3 rounded-lg bg-red-100 px-3 py-2 text-xs text-red-700">
+          ⚠️ 此操作可能会删除文件，请仔细确认后再允许
+        </div>
+      )}
+      <div className="mt-4 flex flex-wrap gap-2">
         <button
-          className="rounded-full bg-accent px-5 py-2 text-sm font-medium text-white shadow-soft hover:bg-accent-hover transition-colors"
+          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white shadow-soft hover:bg-accent-hover transition-colors"
           onClick={() => onSubmit({ behavior: "allow", updatedInput: request.input as Record<string, unknown> })}
+          title="仅允许这一次操作"
         >
-          Allow
+          允许本次
         </button>
         <button
-          className="rounded-full border border-ink-900/10 bg-surface px-5 py-2 text-sm font-medium text-ink-700 hover:bg-surface-tertiary transition-colors"
-          onClick={() => onSubmit({ behavior: "deny", message: "User denied the request" })}
+          className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-soft hover:bg-emerald-700 transition-colors"
+          onClick={() => onSubmit({ 
+            behavior: "allow", 
+            updatedInput: request.input as Record<string, unknown>,
+            allowSession: true 
+          } as PermissionResult & { allowSession: boolean })}
+          title="在本次对话中允许此类操作"
         >
-          Deny
+          允许本次会话
         </button>
+        <button
+          className="rounded-full border border-ink-900/10 bg-surface px-4 py-2 text-sm font-medium text-ink-700 hover:bg-surface-tertiary transition-colors"
+          onClick={() => onSubmit({ behavior: "deny", message: "User denied the request" })}
+          title="拒绝此操作"
+        >
+          拒绝
+        </button>
+      </div>
+      <div className="mt-3 text-xs text-muted">
+        <span className="font-medium">提示：</span>
+        「允许本次」仅批准当前操作；「允许本次会话」将在整个对话期间自动批准同类操作
       </div>
     </div>
   );

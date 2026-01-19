@@ -151,13 +151,28 @@ const AssistantBlockCard = ({ title, text, showIndicator = false }: { title: str
   </div>
 );
 
-const ToolUseCard = ({ messageContent, showIndicator = false }: { messageContent: MessageContent; showIndicator?: boolean }) => {
+const ToolUseCard = ({ 
+  messageContent, 
+  showIndicator = false,
+  permissionRequest,
+  onPermissionResult
+}: { 
+  messageContent: MessageContent; 
+  showIndicator?: boolean;
+  permissionRequest?: PermissionRequest;
+  onPermissionResult?: (toolUseId: string, result: PermissionResult) => void;
+}) => {
   if (messageContent.type !== "tool_use") return null;
 
   const toolStatus = useToolStatus(messageContent.id);
   const statusVariant = toolStatus === "error" ? "error" : "success";
   const isPending = !toolStatus || toolStatus === "pending";
   const shouldShowDot = toolStatus === "success" || toolStatus === "error" || showIndicator;
+
+  // 检查是否有针对此工具的权限请求
+  const hasPermissionRequest = permissionRequest && 
+    permissionRequest.toolName === messageContent.name &&
+    isPending;
 
   useEffect(() => {
     if (messageContent?.id && !toolStatusMap.has(messageContent.id)) setToolStatus(messageContent.id, "pending");
@@ -176,14 +191,26 @@ const ToolUseCard = ({ messageContent, showIndicator = false }: { messageContent
   };
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl bg-surface-tertiary px-3 py-2 mt-3 mr-12 ml-10 overflow-hidden">
-      <div className="flex flex-row items-center gap-2 min-w-0">
-        <StatusDot variant={statusVariant} isActive={isPending && showIndicator} isVisible={shouldShowDot} />
-        <div className="flex flex-row items-center gap-2 tool-use-item min-w-0 flex-1">
-          <span className="inline-flex items-center rounded-md text-accent py-0.5 text-sm font-medium shrink-0">{messageContent.name}</span>
-          <span className="text-sm text-muted truncate">{getToolInfo()}</span>
+    <div className="flex flex-col mt-3 mr-12 ml-10">
+      <div className="flex flex-col gap-2 rounded-2xl bg-surface-tertiary px-3 py-2 overflow-hidden">
+        <div className="flex flex-row items-center gap-2 min-w-0">
+          <StatusDot variant={statusVariant} isActive={isPending && showIndicator} isVisible={shouldShowDot} />
+          <div className="flex flex-row items-center gap-2 tool-use-item min-w-0 flex-1">
+            <span className="inline-flex items-center rounded-md text-accent py-0.5 text-sm font-medium shrink-0">{messageContent.name}</span>
+            <span className="text-sm text-muted truncate">{getToolInfo()}</span>
+          </div>
         </div>
       </div>
+      
+      {/* 显示权限请求面板 */}
+      {hasPermissionRequest && onPermissionResult && (
+        <div className="mt-3">
+          <DecisionPanel
+            request={permissionRequest}
+            onSubmit={(result) => onPermissionResult(permissionRequest.toolUseId, result)}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -307,7 +334,7 @@ export function MessageCard({
             if (content.name === "AskUserQuestion") {
               return <AskUserQuestionCard key={idx} messageContent={content} permissionRequest={permissionRequest} onPermissionResult={onPermissionResult} />;
             }
-            return <ToolUseCard key={idx} messageContent={content} showIndicator={isLastContent && showIndicator} />;
+            return <ToolUseCard key={idx} messageContent={content} showIndicator={isLastContent && showIndicator} permissionRequest={permissionRequest} onPermissionResult={onPermissionResult} />;
           }
           return null;
         })}

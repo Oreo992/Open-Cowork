@@ -86,15 +86,73 @@ export async function runClaude(options: RunnerOptions): Promise<RunnerHandle> {
           abortController,
           env: enhancedEnv,
           pathToClaudeCodeExecutable: claudeCodePath,
-          permissionMode: "default",
+          // 使用 canUseTool 回调时，不设置 permissionMode，让 SDK 完全依赖我们的回调
           includePartialMessages: true,
           model: modelId,
           // 启用 Skills、Slash Commands 和 CLAUDE.md 支持
           settingSources: ["user", "project"],
           canUseTool: async (toolName, input, { signal }) => {
-            // For AskUserQuestion, we need to wait for user response
-            if (toolName === "AskUserQuestion") {
+            console.log(`[canUseTool] Called for tool: ${toolName}`, JSON.stringify(input).slice(0, 200));
+            
+            // 需要用户确认的危险操作
+            const DANGEROUS_TOOLS = [
+              "Write",           // 写入/创建文件
+              "Edit",            // 编辑文件
+              "MultiEdit",       // 批量编辑
+              "Bash",            // 执行命令
+              "AskUserQuestion", // 询问用户
+            ];
+
+            // 检测 Bash 命令中的危险操作（删除命令等）
+            const DANGEROUS_BASH_PATTERNS = [
+              /\brm\s+/i,           // rm 命令
+              /\brmdir\s+/i,        // rmdir 命令
+              /\bdel\s+/i,          // Windows del 命令
+              /\brd\s+/i,           // Windows rd 命令
+              /\bRemove-Item\b/i,   // PowerShell Remove-Item
+              /\bri\s+/i,           // PowerShell ri 别名
+              /\brm\s+-rf?\b/i,     // rm -r / rm -rf
+              /\bunlink\b/i,        // unlink 命令
+            ];
+
+            // 生成工具的权限键（用于会话级别的允许）
+            const getToolPermissionKey = (name: string, toolInput: unknown): string => {
+              // 对于 Bash 命令，检查是否是危险命令
+              if (name === "Bash") {
+                const bashInput = toolInput as { command?: string } | undefined;
+                const command = bashInput?.command || "";
+                for (const pattern of DANGEROUS_BASH_PATTERNS) {
+                  if (pattern.test(command)) {
+                    return `Bash:dangerous`; // 危险 Bash 命令单独分类
+                  }
+                }
+              }
+              return name;
+            };
+
+            const permissionKey = getToolPermissionKey(toolName, input);
+
+            // 检查是否已在本次会话中允许过该工具
+            if (session.sessionAllowedTools.has(permissionKey)) {
+              return { behavior: "allow", updatedInput: input };
+            }
+
+            // 检查是否是危险操作
+            const isDangerousTool = DANGEROUS_TOOLS.includes(toolName);
+            
+            // 对于 Bash 命令，额外检查是否包含危险操作
+            let isDangerousBash = false;
+            if (toolName === "Bash") {
+              const bashInput = input as { command?: string } | undefined;
+              const command = bashInput?.command || "";
+              isDangerousBash = DANGEROUS_BASH_PATTERNS.some(pattern => pattern.test(command));
+            }
+
+            const needsPermission = isDangerousTool || isDangerousBash;
+
+            if (needsPermission) {
               const toolUseId = crypto.randomUUID();
+              console.log(`[canUseTool] Requesting permission for ${toolName}, toolUseId: ${toolUseId}`);
 
               // Send permission request to frontend
               sendPermissionRequest(toolUseId, toolName, input);
@@ -107,7 +165,18 @@ export async function runClaude(options: RunnerOptions): Promise<RunnerHandle> {
                   input,
                   resolve: (result) => {
                     session.pendingPermissions.delete(toolUseId);
-                    resolve(result as PermissionResult);
+                    
+                    // 处理 "allowSession" 行为 - 将工具添加到会话允许列表
+                    const extendedResult = result as { behavior: "allow" | "deny"; updatedInput?: unknown; message?: string; allowSession?: boolean };
+                    if (extendedResult.behavior === "allow" && extendedResult.allowSession) {
+                      session.sessionAllowedTools.add(permissionKey);
+                    }
+                    
+                    if (extendedResult.behavior === "allow") {
+                      resolve({ behavior: "allow", updatedInput: extendedResult.updatedInput as Record<string, unknown> });
+                    } else {
+                      resolve({ behavior: "deny", message: extendedResult.message || "User denied the request" });
+                    }
                   }
                 });
 
@@ -119,7 +188,7 @@ export async function runClaude(options: RunnerOptions): Promise<RunnerHandle> {
               });
             }
 
-            // Auto-approve other tools
+            // Auto-approve safe tools (Read, Glob, Grep, LS, etc.)
             return { behavior: "allow", updatedInput: input };
           }
         }

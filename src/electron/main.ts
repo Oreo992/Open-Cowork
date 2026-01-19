@@ -29,6 +29,14 @@ app.on("ready", () => {
     if (isDev()) mainWindow.loadURL(`http://localhost:${DEV_PORT}`)
     else mainWindow.loadFile(getUIPath());
 
+    // 在生产环境也可以用 Ctrl+Shift+I 打开开发者工具（用于调试）
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+            mainWindow.webContents.toggleDevTools();
+            event.preventDefault();
+        }
+    });
+
     pollResources(mainWindow);
 
     ipcMainHandle("getStaticData", () => {
